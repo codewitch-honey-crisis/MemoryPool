@@ -26,98 +26,98 @@ namespace mem {
     };
 
     // represents a memory pool whose maximum capacity is known at compile time
-    template<size_t C> class StaticMemoryPool : public MemoryPool {
+    template<size_t TCapacity> class StaticMemoryPool : public MemoryPool {
         // the actual buffer
-        uint8_t _heap[C];
+        uint8_t m_heap[TCapacity];
         // the next free pointer
-        uint8_t *_next;
+        uint8_t *m_next;
     public:
         // allocates the specified number of bytes
         // returns nullptr if there's not enough free
         void* alloc(const size_t size) override {
             // if we don't have enough room return null
-            if(used()+size>=C)
+            if(used()+size>TCapacity)
                 return nullptr;
             // get our pointer and reserve the space
-            void* result = _next;
-            _next+=size;
+            void* result = m_next;
+            m_next+=size;
             // return it
             return result;
         }
         // invalidates all the pointers in the pool and frees the memory
         void freeAll() override {
             // just set next to the beginning
-            _next = _heap;
+            m_next = m_heap;
         }
         // retrieves the next pointer that will be allocated
         // (for optimization opportunities)
         void *next() override {
-            if(!C)
+            if(!TCapacity)
                 return nullptr;
-            return _next;
+            return m_next;
         }
         // indicates the maximum capacity of the pool
-        size_t capacity() override { return C; }
+        size_t capacity() override { return TCapacity; }
         // indicates how many bytes are currently used
-        size_t used() override {return _next-_heap;}
-        StaticMemoryPool() : _next(_heap) {}
+        size_t used() override {return m_next-m_heap;}
+        StaticMemoryPool() : m_next(m_heap) {}
         ~StaticMemoryPool() {}
     };
     
     // represents a memory pool whose maximum capacity is determined at runtime
     class DynamicMemoryPool : public MemoryPool {
         // the actual buffer
-        uint8_t *_heap;
+        uint8_t *m_heap;
         // the capacity
-        size_t _capacity;
+        size_t m_capacity;
         // the next free pointer
-        uint8_t *_next;
+        uint8_t *m_next;
     public:
         // initializes the dynamic pool with the specified capacity
         DynamicMemoryPool(const size_t capacity) {
             // special case for 0 cap pool
-            if(0==_capacity) {
-                _heap=_next = nullptr;
+            if(0==m_capacity) {
+                m_heap=m_next = nullptr;
             }
             // reserve space from the heap
-            _heap = new uint8_t[capacity];
+            m_heap = new uint8_t[capacity];
             // initialize the next pointer
-            _next=_heap;
-            if(nullptr==_heap)
-                _capacity=0;
+            m_next=m_heap;
+            if(nullptr==m_heap)
+                m_capacity=0;
         }
         // allocates the specified number of bytes
         // returns nullptr if there's not enough free
         void* alloc(const size_t size) override {
-            if(nullptr==_heap)
+            if(nullptr==m_heap)
                 return nullptr;
             // if we don't have enough room, return null
-            if(used()+size>=_capacity) {
+            if(used()+size>m_capacity) {
                 return nullptr;
             }
             // store the result pointer, then increment next
             // reserving space
-            void* result = _next;
-            _next+=size;
+            void* result = m_next;
+            m_next+=size;
             // return it
             return result;
         }
         // invalidates all the pointers in the pool and frees the memory
         void freeAll() override {
             // just set next to the beginning
-            _next = _heap;
+            m_next = m_heap;
         }
         // retrieves the next pointer that will be allocated
         // (for optimization opportunities)
         void* next() override {
             // just return the next pointer
-            return _next;
+            return m_next;
         }
         // indicates the maximum capacity of the pool
-        size_t capacity() override { if(nullptr==_heap) return 0; return _capacity; }
+        size_t capacity() override { if(nullptr==m_heap) return 0; return m_capacity; }
         // indicates how many bytes are currently used
-        size_t used() override { return _next-_heap;}
-        ~DynamicMemoryPool() { if(nullptr!=_heap) delete _heap;}
+        size_t used() override { return m_next-m_heap;}
+        ~DynamicMemoryPool() { if(nullptr!=m_heap) delete m_heap;}
     };
 }
 #endif
