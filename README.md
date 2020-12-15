@@ -1,2 +1,2 @@
 # MemoryPool
-Small fixed size sequential memory pool allocators for contrained memory environments
+Small fixed size sequential memory pool allocators for constrained memory environments
