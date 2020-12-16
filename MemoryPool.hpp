@@ -85,8 +85,10 @@ namespace mem {
         // initializes the dynamic pool with the specified capacity
         DynamicMemoryPool(const size_t capacity) {
             // special case for 0 cap pool
-            if(0==m_capacity) {
+            if(0==capacity) {
                 m_heap=m_next = nullptr;
+                m_capacity=0;
+                return;
             }
             // reserve space from the heap
             m_heap = new uint8_t[capacity];
