@@ -1,36 +1,42 @@
-
 #ifdef _MSC_VER
 #pragma once
 #endif
 #ifndef HTCW_MEMORYPOOL
 #define HTCW_MEMORYPOOL
+#include <type_traits>
 #include <cinttypes>
 #include <cstddef>
-using namespace std;
+
 namespace mem {
     // represents an interface/contract for a memory pool
     struct MemoryPool {
     public:
         // allocates the specified number of bytes
         // returns nullptr if there's not enough free
-        virtual void* alloc(const size_t size)=0;
+        virtual void* alloc(size_t size)=0;
         // invalidates all the pointers in the pool and frees the memory
         virtual void freeAll()=0;
         // retrieves the next pointer that will be allocated
         // (for optimization opportunities)
-        virtual void* next()=0;
+        virtual void* next() const=0;
         // indicates the maximum capacity of the pool
-        virtual size_t capacity()=0;
+        virtual size_t capacity() const =0;
         // indicates how many bytes are currently used
-        virtual size_t used()=0;
+        virtual size_t used() const=0;
+        virtual ~MemoryPool() {}
     };
 
     // represents a memory pool whose maximum capacity is known at compile time
     template<size_t TCapacity> class StaticMemoryPool : public MemoryPool {
+        static_assert(0<TCapacity,
+                  "StaticMemoryPool requires a postive value for TCapacity");
         // the actual buffer
         uint8_t m_heap[TCapacity];
         // the next free pointer
         uint8_t *m_next;
+        StaticMemoryPool(const StaticMemoryPool& rhs) = delete;
+        StaticMemoryPool(const StaticMemoryPool&& rhs) = delete;
+        StaticMemoryPool& operator=(const StaticMemoryPool& rhs) = delete;
     public:
         // allocates the specified number of bytes
         // returns nullptr if there's not enough free
@@ -51,17 +57,17 @@ namespace mem {
         }
         // retrieves the next pointer that will be allocated
         // (for optimization opportunities)
-        void *next() override {
+        void *next() const override {
             if(!TCapacity)
                 return nullptr;
             return m_next;
         }
         // indicates the maximum capacity of the pool
-        size_t capacity() override { return TCapacity; }
+        size_t capacity() const override { return TCapacity; }
         // indicates how many bytes are currently used
-        size_t used() override {return m_next-m_heap;}
+        size_t used() const override {return m_next-m_heap;}
         StaticMemoryPool() : m_next(m_heap) {}
-        ~StaticMemoryPool() {}
+    
     };
     
     // represents a memory pool whose maximum capacity is determined at runtime
@@ -72,6 +78,9 @@ namespace mem {
         size_t m_capacity;
         // the next free pointer
         uint8_t *m_next;
+        DynamicMemoryPool(const DynamicMemoryPool& rhs) = delete;
+        DynamicMemoryPool(const DynamicMemoryPool&& rhs) = delete;
+        DynamicMemoryPool& operator=(const DynamicMemoryPool& rhs) = delete;
     public:
         // initializes the dynamic pool with the specified capacity
         DynamicMemoryPool(const size_t capacity) {
@@ -109,14 +118,14 @@ namespace mem {
         }
         // retrieves the next pointer that will be allocated
         // (for optimization opportunities)
-        void* next() override {
+        void* next() const override {
             // just return the next pointer
             return m_next;
         }
         // indicates the maximum capacity of the pool
-        size_t capacity() override { if(nullptr==m_heap) return 0; return m_capacity; }
+        size_t capacity() const override { if(nullptr==m_heap) return 0; return m_capacity; }
         // indicates how many bytes are currently used
-        size_t used() override { return m_next-m_heap;}
+        size_t used() const override { return m_next-m_heap;}
         ~DynamicMemoryPool() { if(nullptr!=m_heap) delete m_heap;}
     };
 }
